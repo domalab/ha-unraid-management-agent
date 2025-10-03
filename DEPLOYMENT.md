@@ -63,8 +63,8 @@ Before deploying to production, test the following:
 1. **Create GitHub Repository** (if not exists)
    ```bash
    # Initialize git remote
-   git remote add origin https://github.com/ruaandeysel/unraid-management-agent.git
-   
+   git remote add origin https://github.com/domalab/unraid-management-agent.git
+
    # Push all commits
    git push -u origin main
    ```
@@ -263,7 +263,7 @@ MIT License - See LICENSE file for details
 
 ## Credits
 
-Developed by [@ruaandeysel](https://github.com/ruaandeysel)
+Developed by [@domalab](https://github.com/domalab)
 
 ---
 
