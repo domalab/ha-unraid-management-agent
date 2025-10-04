@@ -1,4 +1,5 @@
 """Switch platform for Unraid Management Agent."""
+
 from __future__ import annotations
 
 import logging
@@ -77,7 +78,7 @@ class UnraidSwitchBase(CoordinatorEntity, SwitchEntity):
         """Return device information."""
         system_data = self.coordinator.data.get(KEY_SYSTEM, {})
         hostname = system_data.get("hostname", "Unraid")
-        
+
         return {
             "identifiers": {(DOMAIN, self._entry.entry_id)},
             "name": f"Unraid ({hostname})",
@@ -88,6 +89,7 @@ class UnraidSwitchBase(CoordinatorEntity, SwitchEntity):
 
 
 # Container Switches
+
 
 class UnraidContainerSwitch(UnraidSwitchBase):
     """Container control switch."""
@@ -162,6 +164,7 @@ class UnraidContainerSwitch(UnraidSwitchBase):
 
 # VM Switches
 
+
 class UnraidVMSwitch(UnraidSwitchBase):
     """VM control switch."""
 
@@ -230,4 +233,3 @@ class UnraidVMSwitch(UnraidSwitchBase):
             raise HomeAssistantError(
                 f"{ERROR_CONTROL_FAILED}: Failed to stop VM {self._vm_name}"
             ) from err
-

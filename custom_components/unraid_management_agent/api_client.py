@@ -1,6 +1,5 @@
 """API client for Unraid Management Agent."""
 
-import asyncio
 import logging
 from typing import Any
 
@@ -99,7 +98,7 @@ class UnraidAPIClient:
                             text[:500],
                         )
                         raise
-        except asyncio.TimeoutError as err:
+        except TimeoutError as err:
             _LOGGER.error("Timeout connecting to %s", url)
             raise TimeoutError(f"Timeout connecting to {url}") from err
         except aiohttp.ClientError as err:

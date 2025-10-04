@@ -5,7 +5,8 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 import aiohttp
 
@@ -28,7 +29,8 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def identify_event_type(data: Any) -> str:
-    """Identify event type from data structure.
+    """
+    Identify event type from data structure.
 
     Events don't have a 'type' field, so we inspect the data structure.
     List-based events (disks, containers, VMs, network, shares) are identified
@@ -213,9 +215,11 @@ class UnraidWebSocketClient:
                 elif isinstance(event_data, list) and event_data:
                     _LOGGER.debug(
                         "Received unknown list event, first item keys: %s",
-                        list(event_data[0].keys())
-                        if isinstance(event_data[0], dict)
-                        else type(event_data[0]),
+                        (
+                            list(event_data[0].keys())
+                            if isinstance(event_data[0], dict)
+                            else type(event_data[0])
+                        ),
                     )
                 else:
                     _LOGGER.debug("Received unknown event type: %s", type(event_data))

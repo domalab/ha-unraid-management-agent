@@ -3,8 +3,6 @@
 from datetime import timedelta
 from typing import Final
 
-from homeassistant.helpers.entity import EntityCategory
-
 # Integration domain
 DOMAIN: Final = "unraid_management_agent"
 

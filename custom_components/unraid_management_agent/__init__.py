@@ -1,4 +1,5 @@
 """The Unraid Management Agent integration."""
+
 from __future__ import annotations
 
 import asyncio
@@ -11,13 +12,10 @@ from homeassistant.const import CONF_HOST, CONF_PORT, Platform
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import (
-    DataUpdateCoordinator,
-    UpdateFailed,
-)
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .api_client import UnraidAPIClient
 from . import repairs
+from .api_client import UnraidAPIClient
 from .const import (
     CONF_ENABLE_WEBSOCKET,
     CONF_UPDATE_INTERVAL,
@@ -58,7 +56,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     host = entry.data[CONF_HOST]
     port = entry.data[CONF_PORT]
     update_interval = entry.options.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
-    enable_websocket = entry.options.get(CONF_ENABLE_WEBSOCKET, DEFAULT_ENABLE_WEBSOCKET)
+    enable_websocket = entry.options.get(
+        CONF_ENABLE_WEBSOCKET, DEFAULT_ENABLE_WEBSOCKET
+    )
 
     session = async_get_clientsession(hass)
     client = UnraidAPIClient(host=host, port=port, session=session)
@@ -313,10 +313,16 @@ async def async_setup_services(
     hass.services.async_register(DOMAIN, "array_start", handle_array_start)
     hass.services.async_register(DOMAIN, "array_stop", handle_array_stop)
 
-    hass.services.async_register(DOMAIN, "parity_check_start", handle_parity_check_start)
+    hass.services.async_register(
+        DOMAIN, "parity_check_start", handle_parity_check_start
+    )
     hass.services.async_register(DOMAIN, "parity_check_stop", handle_parity_check_stop)
-    hass.services.async_register(DOMAIN, "parity_check_pause", handle_parity_check_pause)
-    hass.services.async_register(DOMAIN, "parity_check_resume", handle_parity_check_resume)
+    hass.services.async_register(
+        DOMAIN, "parity_check_pause", handle_parity_check_pause
+    )
+    hass.services.async_register(
+        DOMAIN, "parity_check_resume", handle_parity_check_resume
+    )
 
     _LOGGER.info("Registered %d services for Unraid Management Agent", 18)
 
@@ -344,7 +350,8 @@ class UnraidDataUpdateCoordinator(DataUpdateCoordinator):
         )
 
     async def _async_update_data(self) -> dict[str, Any]:
-        """Fetch data from API endpoint.
+        """
+        Fetch data from API endpoint.
 
         This is the place to pre-process the data to lookup tables
         so entities can quickly look up their data.
@@ -368,11 +375,15 @@ class UnraidDataUpdateCoordinator(DataUpdateCoordinator):
                 KEY_SYSTEM: results[0] if not isinstance(results[0], Exception) else {},
                 KEY_ARRAY: results[1] if not isinstance(results[1], Exception) else {},
                 KEY_DISKS: results[2] if not isinstance(results[2], Exception) else [],
-                KEY_CONTAINERS: results[3] if not isinstance(results[3], Exception) else [],
+                KEY_CONTAINERS: (
+                    results[3] if not isinstance(results[3], Exception) else []
+                ),
                 KEY_VMS: results[4] if not isinstance(results[4], Exception) else [],
                 KEY_UPS: results[5] if not isinstance(results[5], Exception) else {},
                 KEY_GPU: results[6] if not isinstance(results[6], Exception) else [],
-                KEY_NETWORK: results[7] if not isinstance(results[7], Exception) else [],
+                KEY_NETWORK: (
+                    results[7] if not isinstance(results[7], Exception) else []
+                ),
             }
 
             # Log any errors
@@ -452,4 +463,3 @@ class UnraidDataUpdateCoordinator(DataUpdateCoordinator):
                 pass
             self.websocket_task = None
             _LOGGER.info("WebSocket client stopped")
-

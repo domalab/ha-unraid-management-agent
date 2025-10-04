@@ -51,8 +51,8 @@ from .const import (
     ICON_PARITY,
     ICON_POWER,
     ICON_TEMPERATURE,
-    ICON_UPTIME,
     ICON_UPS,
+    ICON_UPTIME,
     KEY_ARRAY,
     KEY_DISKS,
     KEY_GPU,
@@ -67,7 +67,8 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def _is_physical_network_interface(interface_name: str) -> bool:
-    """Check if the network interface is a physical interface.
+    """
+    Check if the network interface is a physical interface.
 
     Only include physical interfaces like eth0, eth1, wlan0, bond0, etc.
     Exclude virtual interfaces (veth*, br-*, docker*, virbr*) and loopback (lo).
@@ -267,9 +268,9 @@ class UnraidRAMUsageSensor(UnraidSensorBase):
         system_data = self.coordinator.data.get(KEY_SYSTEM, {})
         ram_total = system_data.get("ram_total_bytes", 0)
         return {
-            ATTR_RAM_TOTAL: f"{ram_total / (1024**3):.2f} GB"
-            if ram_total
-            else "Unknown",
+            ATTR_RAM_TOTAL: (
+                f"{ram_total / (1024**3):.2f} GB" if ram_total else "Unknown"
+            ),
             ATTR_SERVER_MODEL: system_data.get("server_model"),
         }
 
@@ -365,7 +366,8 @@ class UnraidUptimeSensor(UnraidSensorBase):
 
     @staticmethod
     def _format_uptime(seconds: int) -> str:
-        """Format uptime seconds into human-readable string.
+        """
+        Format uptime seconds into human-readable string.
 
         Returns format like: "42 days, 21 hours, 31 minutes, 49 seconds"
         Matches the Unraid web UI display format.
@@ -884,15 +886,21 @@ class UnraidDiskUsageSensor(UnraidSensorBase):
                     "filesystem": disk.get("filesystem"),
                     "mount_point": disk.get("mount_point"),
                     "spin_state": spin_state,
-                    "size": f"{size_bytes / (1024**3):.2f} GB"
-                    if size_bytes is not None
-                    else "Unknown",
-                    "used": f"{used_bytes / (1024**3):.2f} GB"
-                    if used_bytes is not None
-                    else "Unknown",
-                    "free": f"{free_bytes / (1024**3):.2f} GB"
-                    if free_bytes is not None
-                    else "Unknown",
+                    "size": (
+                        f"{size_bytes / (1024**3):.2f} GB"
+                        if size_bytes is not None
+                        else "Unknown"
+                    ),
+                    "used": (
+                        f"{used_bytes / (1024**3):.2f} GB"
+                        if used_bytes is not None
+                        else "Unknown"
+                    ),
+                    "free": (
+                        f"{free_bytes / (1024**3):.2f} GB"
+                        if free_bytes is not None
+                        else "Unknown"
+                    ),
                     "smart_status": disk.get("smart_status"),
                     "smart_errors": disk.get("smart_errors", 0),
                 }

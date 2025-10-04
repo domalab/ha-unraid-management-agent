@@ -43,7 +43,8 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def _is_physical_network_interface(interface_name: str) -> bool:
-    """Check if the network interface is a physical interface.
+    """
+    Check if the network interface is a physical interface.
 
     Only include physical interfaces like eth0, eth1, wlan0, bond0, etc.
     Exclude virtual interfaces (veth*, br-*, docker*, virbr*) and loopback (lo).

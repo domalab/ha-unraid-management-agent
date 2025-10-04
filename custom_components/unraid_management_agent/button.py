@@ -1,4 +1,5 @@
 """Button platform for Unraid Management Agent."""
+
 from __future__ import annotations
 
 import logging
@@ -61,7 +62,7 @@ class UnraidButtonBase(CoordinatorEntity, ButtonEntity):
         """Return device information."""
         system_data = self.coordinator.data.get(KEY_SYSTEM, {})
         hostname = system_data.get("hostname", "Unraid")
-        
+
         return {
             "identifiers": {(DOMAIN, self._entry.entry_id)},
             "name": f"Unraid ({hostname})",
@@ -72,6 +73,7 @@ class UnraidButtonBase(CoordinatorEntity, ButtonEntity):
 
 
 # Array Control Buttons
+
 
 class UnraidArrayStartButton(UnraidButtonBase):
     """Array start button."""
@@ -125,6 +127,7 @@ class UnraidArrayStopButton(UnraidButtonBase):
 
 # Parity Check Control Buttons
 
+
 class UnraidParityCheckStartButton(UnraidButtonBase):
     """Parity check start button."""
 
@@ -173,4 +176,3 @@ class UnraidParityCheckStopButton(UnraidButtonBase):
             raise HomeAssistantError(
                 f"{ERROR_CONTROL_FAILED}: Failed to stop parity check"
             ) from err
-

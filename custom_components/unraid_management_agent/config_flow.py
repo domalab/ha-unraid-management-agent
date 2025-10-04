@@ -1,12 +1,11 @@
 """Config flow for Unraid Management Agent integration."""
+
 from __future__ import annotations
 
 import logging
 from typing import Any
 
-import aiohttp
 import voluptuous as vol
-
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant, callback
@@ -38,13 +37,16 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
         vol.Optional(CONF_UPDATE_INTERVAL, default=DEFAULT_UPDATE_INTERVAL): vol.All(
             vol.Coerce(int), vol.Range(min=5, max=300)
         ),
-        vol.Optional(CONF_ENABLE_WEBSOCKET, default=DEFAULT_ENABLE_WEBSOCKET): cv.boolean,
+        vol.Optional(
+            CONF_ENABLE_WEBSOCKET, default=DEFAULT_ENABLE_WEBSOCKET
+        ): cv.boolean,
     }
 )
 
 
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
-    """Validate the user input allows us to connect.
+    """
+    Validate the user input allows us to connect.
 
     Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
     """
@@ -59,7 +61,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         # Test connection by getting system info
         system_info = await client.get_system_info()
         hostname = system_info.get("hostname", "unknown")
-        
+
         return {
             "title": f"Unraid ({hostname})",
             "hostname": hostname,
@@ -156,4 +158,3 @@ class UnraidOptionsFlowHandler(config_entries.OptionsFlow):
                 }
             ),
         )
-

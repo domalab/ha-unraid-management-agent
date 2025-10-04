@@ -172,7 +172,6 @@ class ParityCheckRepairFlow(RepairsFlow):
 
 async def async_check_and_create_issues(hass: HomeAssistant, coordinator) -> None:
     """Check for issues and create repair flows if needed."""
-
     # Check for connection issues
     if not coordinator.last_update_success:
         ir.async_create_issue(
@@ -185,9 +184,11 @@ async def async_check_and_create_issues(hass: HomeAssistant, coordinator) -> Non
             translation_placeholders={
                 "host": coordinator.config_entry.data.get("host", "Unknown"),
                 "port": str(coordinator.config_entry.data.get("port", "Unknown")),
-                "error": str(coordinator.last_exception)
-                if coordinator.last_exception
-                else "Unknown error",
+                "error": (
+                    str(coordinator.last_exception)
+                    if coordinator.last_exception
+                    else "Unknown error"
+                ),
             },
         )
 
