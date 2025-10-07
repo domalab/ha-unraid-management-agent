@@ -42,7 +42,7 @@ Complete Home Assistant custom integration for monitoring and controlling Unraid
 ### Prerequisites
 
 1. **Unraid Management Agent** installed and running on your Unraid server
-2. **Home Assistant** 2023.1 or newer
+2. **Home Assistant** 2025.1 or newer
 3. **Network access** between Home Assistant and Unraid server
 
 ### Installation
