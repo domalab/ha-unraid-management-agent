@@ -47,8 +47,6 @@ Complete Home Assistant custom integration for monitoring and controlling Unraid
 
 ### Installation
 
-See [INSTALLATION.md](INSTALLATION.md) for detailed instructions.
-
 **Quick Install via HACS:**
 1. Add custom repository: `https://github.com/domalab/ha-unraid-management-agent`
 2. Install "Unraid Management Agent"
@@ -65,13 +63,6 @@ See [INSTALLATION.md](INSTALLATION.md) for detailed instructions.
    - Port: `8043` (default)
    - Update Interval: `30` seconds
    - Enable WebSocket: `true` (recommended)
-
-## Documentation
-
-- **[Installation Guide](INSTALLATION.md)** - Detailed installation and configuration
-- **[Examples](EXAMPLES.md)** - Automations, dashboards, and scripts
-- **[Integration README](custom_components/unraid_management_agent/README.md)** - Entity list and services
-- **[WebSocket Test Results](../WEBSOCKET_TEST_RESULTS.md)** - WebSocket implementation details
 
 ## Entity Overview
 
@@ -175,8 +166,6 @@ automation:
           entity_id: button.unraid_array_stop
 ```
 
-See [EXAMPLES.md](EXAMPLES.md) for more automation examples, dashboard configurations, and scripts.
-
 ## Architecture
 
 ### Components
@@ -236,8 +225,6 @@ Unraid Server (REST API + WebSocket)
 - Reload integration
 - Check logs for entity creation errors
 
-See [INSTALLATION.md](INSTALLATION.md) for detailed troubleshooting.
-
 ## Development
 
 ### Project Structure
@@ -257,8 +244,6 @@ ha-unraid-management-agent/
 │       ├── strings.json          # Translations
 │       ├── switch.py             # Switch platform
 │       └── websocket_client.py   # WebSocket client
-├── EXAMPLES.md                   # Automation examples
-├── INSTALLATION.md               # Installation guide
 └── README.md                     # This file
 ```
 
@@ -277,17 +262,6 @@ ha-unraid-management-agent/
 5. Test control operations
 6. Test WebSocket reconnection
 
-## Support
-
-- **Issues**: [GitHub Issues](https://github.com/domalab/unraid-management-agent/issues)
-- **Documentation**: [GitHub Wiki](https://github.com/domalab/unraid-management-agent/wiki)
-- **Discussions**: [GitHub Discussions](https://github.com/domalab/unraid-management-agent/discussions)
-
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
-
-## Credits
-
-Developed by [@domalab](https://github.com/domalab)
-
