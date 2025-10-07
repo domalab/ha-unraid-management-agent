@@ -197,7 +197,7 @@ automation:
 
 ### Data Flow
 
-```
+```bash
 Unraid Server (REST API + WebSocket)
            ↓
     API Client / WebSocket Client
@@ -248,7 +248,7 @@ Unraid Server (REST API + WebSocket)
 
 ### Project Structure
 
-```
+```bash
 ha-unraid-management-agent/
 ├── custom_components/
 │   └── unraid_management_agent/
