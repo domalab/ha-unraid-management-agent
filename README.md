@@ -283,15 +283,6 @@ ha-unraid-management-agent/
 - **Documentation**: [GitHub Wiki](https://github.com/domalab/unraid-management-agent/wiki)
 - **Discussions**: [GitHub Discussions](https://github.com/domalab/unraid-management-agent/discussions)
 
-## Contributing
-
-Contributions are welcome! Please:
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
@@ -299,44 +290,4 @@ This project is licensed under the MIT License - see the [LICENSE](../LICENSE) f
 ## Credits
 
 Developed by [@domalab](https://github.com/domalab)
-
-## Changelog
-
-### Version 1.0.0 (2025-01-02)
-
-**Initial Release**
-
-✅ **Core Features**
-- Complete Home Assistant integration with UI configuration
-- REST API client with all monitoring and control endpoints
-- WebSocket client with real-time event streaming
-- Automatic fallback to REST polling
-
-✅ **Monitoring**
-- System sensors (CPU, RAM, temperature, uptime)
-- Array sensors (usage, parity progress)
-- GPU sensors (name, utilization, temperature, power)
-- UPS sensors (battery, load, runtime)
-- Network sensors (RX/TX per interface)
-
-✅ **Status Indicators**
-- Array binary sensors (started, parity check, parity valid)
-- UPS binary sensor (connected)
-- Container binary sensors (running state)
-- VM binary sensors (running state)
-- Network binary sensors (interface up/down)
-
-✅ **Control**
-- Container switches (start/stop)
-- VM switches (start/stop)
-- Array buttons (start/stop)
-- Parity check buttons (start/stop)
-
-✅ **Quality**
-- Proper device classes and state classes
-- MDI icons for all entities
-- Extra state attributes
-- Error handling and logging
-- Comprehensive documentation
-- Example automations and dashboards
 
