@@ -1,8 +1,8 @@
 # Unraid Management Agent - Home Assistant Integration
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)
-[![GitHub Release](https://img.shields.io/github/release/ruaandeysel/unraid-management-agent.svg)](https://github.com/ruaandeysel/unraid-management-agent/releases)
-[![License](https://img.shields.io/github/license/ruaandeysel/unraid-management-agent.svg)](LICENSE)
+[![GitHub Release](https://img.shields.io/github/release/domalab/ha-unraid-management-agent.svg)](https://github.com/domalab/ha-unraid-management-agent/releases)
+[![License](https://img.shields.io/github/license/domalab/ha-unraid-management-agent.svg)](LICENSE)
 
 Home Assistant custom integration for monitoring and controlling Unraid servers via the Unraid Management Agent.
 
@@ -30,7 +30,7 @@ For detailed installation instructions, see [INSTALLATION.md](../../INSTALLATION
 ### Quick Start
 
 1. **HACS Installation** (Recommended)
-   - Add custom repository: `https://github.com/ruaandeysel/unraid-management-agent`
+   - Add custom repository: `https://github.com/domalab/ha-unraid-management-agent`
    - Install "Unraid Management Agent"
    - Restart Home Assistant
 
@@ -296,9 +296,9 @@ If entities are missing:
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/ruaandeysel/unraid-management-agent/issues)
-- **Documentation**: [GitHub Wiki](https://github.com/ruaandeysel/unraid-management-agent/wiki)
-- **Discussions**: [GitHub Discussions](https://github.com/ruaandeysel/unraid-management-agent/discussions)
+- **Issues**: [GitHub Issues](https://github.com/domalab/ha-unraid-management-agent/issues)
+- **Documentation**: [GitHub Wiki](https://github.com/domalab/ha-unraid-management-agent/wiki)
+- **Discussions**: [GitHub Discussions](https://github.com/domalab/ha-unraid-management-agent/discussions)
 
 ## License
 
@@ -306,14 +306,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Credits
 
-Developed by [@ruaandeysel](https://github.com/ruaandeysel)
-
-## Changelog
-
-### Version 1.0.0
-- Initial release
-- System, array, GPU, UPS, network monitoring
-- Docker container and VM control
-- WebSocket support for real-time updates
-- Full Home Assistant integration with UI configuration
+Developed by [@domalab](https://github.com/domalab)
 
