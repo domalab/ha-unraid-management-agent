@@ -9,6 +9,7 @@ Complete Home Assistant custom integration for monitoring and controlling Unraid
 ## Features
 
 ### 🔍 Comprehensive Monitoring
+
 - **System Metrics**: CPU usage, RAM usage, CPU temperature, uptime
 - **Array Status**: Array state, disk usage, parity check progress
 - **GPU Metrics**: GPU utilization, temperature, power consumption (Intel/NVIDIA/AMD)
@@ -18,18 +19,21 @@ Complete Home Assistant custom integration for monitoring and controlling Unraid
 - **Virtual Machines**: VM status and resource allocation
 
 ### 🎮 Full Control
+
 - **Docker Containers**: Start, stop, restart containers via switches
 - **Virtual Machines**: Start, stop, restart VMs via switches
 - **Array Management**: Start/stop array with buttons
 - **Parity Checks**: Start/stop parity checks with buttons
 
 ### ⚡ Real-Time Updates
+
 - **WebSocket Support**: Instant state updates (<1s latency)
 - **Automatic Fallback**: Falls back to REST API polling if WebSocket fails
 - **Exponential Backoff**: Smart reconnection strategy
 - **No Data Loss**: Seamless transition between WebSocket and polling
 
 ### 🏠 Home Assistant Native
+
 - **UI Configuration**: No YAML required for setup
 - **Device Grouping**: All entities grouped under single device
 - **Proper Device Classes**: Temperature, power, battery, duration, etc.
@@ -48,6 +52,7 @@ Complete Home Assistant custom integration for monitoring and controlling Unraid
 ### Installation
 
 **Quick Install via HACS:**
+
 1. Add custom repository: `https://github.com/domalab/ha-unraid-management-agent`
 2. Install "Unraid Management Agent"
 3. Restart Home Assistant
@@ -69,47 +74,57 @@ Complete Home Assistant custom integration for monitoring and controlling Unraid
 ### Sensors (13+ entities)
 
 **System Sensors (4)**
+
 - CPU Usage (%)
 - RAM Usage (%)
 - CPU Temperature (°C)
 - Uptime (seconds)
 
 **Array Sensors (2)**
+
 - Array Usage (%)
 - Parity Check Progress (%)
 
 **GPU Sensors (4, conditional)**
+
 - GPU Name
 - GPU Utilization (%)
 - GPU CPU Temperature (°C)
 - GPU Power (W)
 
 **UPS Sensors (3, conditional)**
+
 - UPS Battery (%)
 - UPS Load (%)
 - UPS Runtime (seconds)
 
 **Network Sensors (dynamic)**
+
 - Network {interface} RX (bytes)
 - Network {interface} TX (bytes)
 
 ### Binary Sensors (7+ entities)
 
 **Array Binary Sensors (3)**
+
 - Array Started (on/off)
 - Parity Check Running (on/off)
 - Parity Valid (problem indicator)
 
 **UPS Binary Sensor (1, conditional)**
+
 - UPS Connected (on/off)
 
 **Container Binary Sensors (dynamic)**
+
 - Container {name} (running/stopped)
 
 **VM Binary Sensors (dynamic)**
+
 - VM {name} (running/stopped)
 
 **Network Binary Sensors (dynamic)**
+
 - Network {interface} (up/down)
 
 ### Switches (dynamic)
@@ -206,21 +221,25 @@ Unraid Server (REST API + WebSocket)
 ### Common Issues
 
 **Cannot Connect**
+
 - Verify Unraid Management Agent is running: `curl http://<ip>:8043/api/v1/health`
 - Check firewall rules allow port 8043
 - Ensure Home Assistant can reach Unraid server
 
 **WebSocket Not Working**
+
 - Check logs for WebSocket errors
 - Verify no proxy blocking WebSocket
 - Integration will fall back to REST polling automatically
 
 **Entities Not Updating**
+
 - Check update interval in options
 - Verify WebSocket connection in logs
 - Test REST API manually
 
 **Missing Entities**
+
 - Verify resources exist on Unraid (containers, VMs, GPU, UPS)
 - Reload integration
 - Check logs for entity creation errors
@@ -251,12 +270,14 @@ ha-unraid-management-agent/
 
 1. Install in development mode
 2. Enable debug logging:
+
    ```yaml
    logger:
      default: info
      logs:
        custom_components.unraid_management_agent: debug
    ```
+
 3. Check logs for errors
 4. Test all entity types
 5. Test control operations
