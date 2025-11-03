@@ -1,8 +1,8 @@
 # Unraid Management Agent - Home Assistant Integration
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)
-[![GitHub Release](https://img.shields.io/github/release/domalab/ha-unraid-management-agent.svg)](https://github.com/domalab/ha-unraid-management-agent/releases)
-[![License](https://img.shields.io/github/license/domalab/ha-unraid-management-agent.svg)](../LICENSE)
+[![GitHub Release](https://img.shields.io/github/release/ruaan-deysel/ha-unraid-management-agent.svg)](https://github.com/ruaan-deysel/ha-unraid-management-agent/releases)
+[![License](https://img.shields.io/github/license/ruaan-deysel/ha-unraid-management-agent.svg)](../LICENSE)
 
 Complete Home Assistant custom integration for monitoring and controlling Unraid servers via the Unraid Management Agent.
 
@@ -53,7 +53,7 @@ Complete Home Assistant custom integration for monitoring and controlling Unraid
 
 **Quick Install via HACS:**
 
-1. Add custom repository: `https://github.com/domalab/ha-unraid-management-agent`
+1. Add custom repository: `https://github.com/ruaan-deysel/ha-unraid-management-agent`
 2. Install "Unraid Management Agent"
 3. Restart Home Assistant
 4. Add integration via UI
