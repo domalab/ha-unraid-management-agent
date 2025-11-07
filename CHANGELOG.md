@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Major README.md improvements based on comprehensive audit**:
+  - Fixed sensor count from "13+ entities" to "30+ base entities" to accurately reflect actual implementation
+  - Corrected GPU Sensors count from 4 to 3 (removed non-existent "GPU Name" sensor)
+  - Added missing Disk Sensors section documenting disk usage, disk health, Docker vDisk, and log filesystem sensors
+  - Added missing System Sensors: Motherboard Temperature (conditional) and Fan Speed (dynamic)
+  - Added missing UPS Power sensor (Energy Dashboard compatible)
+  - Fixed Network Sensors units from "bytes" to "bits/s" for accuracy
+  - Added comprehensive Services section documenting all 18 available services (container, VM, array, parity check)
+  - Updated example automations with correct entity ID format including hostname
+  - Added new example automations for disk health monitoring and container auto-restart
 - Enhanced README.md with comprehensive Prerequisites section
 - Added HACS installation badge for one-click installation
 - Improved documentation with detailed Unraid Management Agent plugin installation instructions

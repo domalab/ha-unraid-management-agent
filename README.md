@@ -133,37 +133,46 @@ Ensure your firewall allows:
 
 ## Entity Overview
 
-### Sensors (13+ entities)
+### Sensors (30+ base entities)
 
-**System Sensors (4)**
+**System Sensors (6+ entities)**
 
 - CPU Usage (%)
 - RAM Usage (%)
 - CPU Temperature (°C)
-- Uptime (seconds)
+- Motherboard Temperature (°C) - conditional, only if available
+- Fan {name} (RPM) - dynamic, one per detected fan
+- Uptime (human-readable format)
 
-**Array Sensors (2)**
+**Array Sensors (2 entities)**
 
 - Array Usage (%)
 - Parity Check Progress (%)
 
-**GPU Sensors (4, conditional)**
+**Disk Sensors (dynamic)**
 
-- GPU Name
+- Disk {name} Usage (%) - dynamic, one per disk (excludes parity disks)
+- Disk {name} Health - dynamic, one per physical disk with SMART data
+- Docker vDisk Usage (%) - conditional, only if Docker vDisk exists
+- Log Filesystem Usage (%) - conditional, only if log filesystem exists
+
+**GPU Sensors (3 entities, conditional)**
+
 - GPU Utilization (%)
 - GPU CPU Temperature (°C)
 - GPU Power (W)
 
-**UPS Sensors (3, conditional)**
+**UPS Sensors (4 entities, conditional)**
 
 - UPS Battery (%)
 - UPS Load (%)
 - UPS Runtime (seconds)
+- UPS Power (W) - compatible with Home Assistant Energy Dashboard
 
 **Network Sensors (dynamic)**
 
-- Network {interface} RX (bytes)
-- Network {interface} TX (bytes)
+- Network {interface} Inbound (bits/s) - one per physical interface
+- Network {interface} Outbound (bits/s) - one per physical interface
 
 ### Binary Sensors (7+ entities)
 
@@ -201,7 +210,71 @@ Ensure your firewall allows:
 - Start Parity Check
 - Stop Parity Check
 
+## Services
+
+The integration provides 18 services for advanced automation and control beyond what switches and buttons offer.
+
+### Container Services (5)
+
+- `unraid_management_agent.container_start` - Start a Docker container
+- `unraid_management_agent.container_stop` - Stop a Docker container
+- `unraid_management_agent.container_restart` - Restart a Docker container
+- `unraid_management_agent.container_pause` - Pause a running Docker container
+- `unraid_management_agent.container_resume` - Resume a paused Docker container (unpause)
+
+**Example**:
+
+```yaml
+service: unraid_management_agent.container_start
+data:
+  container_id: "plex"
+```
+
+### Virtual Machine Services (7)
+
+- `unraid_management_agent.vm_start` - Start a virtual machine
+- `unraid_management_agent.vm_stop` - Stop a virtual machine (graceful shutdown)
+- `unraid_management_agent.vm_restart` - Restart a virtual machine
+- `unraid_management_agent.vm_pause` - Pause a running virtual machine (suspend to RAM)
+- `unraid_management_agent.vm_resume` - Resume a paused virtual machine
+- `unraid_management_agent.vm_hibernate` - Hibernate a virtual machine (suspend to disk)
+- `unraid_management_agent.vm_force_stop` - Force stop a virtual machine (equivalent to power off)
+
+**Example**:
+
+```yaml
+service: unraid_management_agent.vm_hibernate
+data:
+  vm_id: "Windows 10"
+```
+
+### Array Control Services (2)
+
+- `unraid_management_agent.array_start` - Start the Unraid array
+- `unraid_management_agent.array_stop` - Stop the Unraid array
+
+**Example**:
+
+```yaml
+service: unraid_management_agent.array_start
+```
+
+### Parity Check Services (4)
+
+- `unraid_management_agent.parity_check_start` - Start a parity check
+- `unraid_management_agent.parity_check_stop` - Stop the running parity check
+- `unraid_management_agent.parity_check_pause` - Pause the running parity check
+- `unraid_management_agent.parity_check_resume` - Resume a paused parity check
+
+**Example**:
+
+```yaml
+service: unraid_management_agent.parity_check_pause
+```
+
 ## Example Automations
+
+> **Note**: Replace `tower` in the entity IDs below with your actual Unraid server hostname (e.g., if your Unraid server is named "nas", use `sensor.unraid_nas_cpu_usage`).
 
 ### High CPU Alert
 
@@ -210,7 +283,7 @@ automation:
   - alias: "Unraid High CPU Alert"
     trigger:
       - platform: numeric_state
-        entity_id: sensor.unraid_cpu_usage
+        entity_id: sensor.unraid_tower_cpu_usage
         above: 80
         for:
           minutes: 5
@@ -218,7 +291,7 @@ automation:
       - service: notify.mobile_app
         data:
           title: "⚠️ Unraid Alert"
-          message: "CPU usage is {{ states('sensor.unraid_cpu_usage') }}%"
+          message: "CPU usage is {{ states('sensor.unraid_tower_cpu_usage') }}%"
 ```
 
 ### UPS Graceful Shutdown
@@ -228,7 +301,7 @@ automation:
   - alias: "Unraid UPS Critical Shutdown"
     trigger:
       - platform: numeric_state
-        entity_id: sensor.unraid_ups_battery
+        entity_id: sensor.unraid_tower_ups_battery
         below: 10
     action:
       - service: switch.turn_off
@@ -240,7 +313,40 @@ automation:
           seconds: 30
       - service: button.press
         target:
-          entity_id: button.unraid_array_stop
+          entity_id: button.unraid_tower_stop_array
+```
+
+### Disk Health Alert
+
+```yaml
+automation:
+  - alias: "Unraid Disk Health Alert"
+    trigger:
+      - platform: state
+        entity_id: sensor.unraid_tower_disk_disk1_health
+        to: "Failed"
+    action:
+      - service: notify.mobile_app
+        data:
+          title: "🚨 Unraid Disk Alert"
+          message: "Disk 1 health status is {{ states('sensor.unraid_tower_disk_disk1_health') }}"
+```
+
+### Container Auto-Restart on Failure
+
+```yaml
+automation:
+  - alias: "Restart Plex on Stop"
+    trigger:
+      - platform: state
+        entity_id: switch.unraid_tower_container_plex
+        to: "off"
+        for:
+          minutes: 1
+    action:
+      - service: unraid_management_agent.container_start
+        data:
+          container_id: "plex"
 ```
 
 ## Architecture
