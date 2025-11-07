@@ -41,22 +41,84 @@ Complete Home Assistant custom integration for monitoring and controlling Unraid
 - **MDI Icons**: Beautiful Material Design Icons for all entities
 - **Extra Attributes**: Contextual information for each entity
 
-## Quick Start
+## Prerequisites
 
-### Prerequisites
+Before installing this Home Assistant integration, you **must** have the Unraid Management Agent plugin installed and running on your Unraid server.
 
-1. **Unraid Management Agent** installed and running on your Unraid server
-2. **Home Assistant** 2025.1 or newer
-3. **Network access** between Home Assistant and Unraid server
+### 1. Install Unraid Management Agent Plugin
 
-### Installation
+The Unraid Management Agent is a plugin that runs on your Unraid server and provides the API that this Home Assistant integration connects to.
 
-**Quick Install via HACS:**
+#### Option A: Install via Community Applications (Recommended)
 
-1. Add custom repository: `https://github.com/ruaan-deysel/ha-unraid-management-agent`
-2. Install "Unraid Management Agent"
+1. Open your Unraid web interface
+2. Go to **Apps** tab
+3. Search for **"Unraid Management Agent"**
+4. Click **Install**
+5. Configure the plugin settings (default port: 8043)
+6. Start the plugin
+
+#### Option B: Manual Installation via Plugin URL
+
+1. Open your Unraid web interface
+2. Go to **Plugins** tab
+3. Click **Install Plugin**
+4. Paste this URL:
+   ```
+   https://raw.githubusercontent.com/ruaan-deysel/unraid-management-agent/main/unraid-management-agent.plg
+   ```
+5. Click **Install**
+6. Configure the plugin settings (default port: 8043)
+7. Start the plugin
+
+#### Verify Plugin Installation
+
+After installation, verify the plugin is running by accessing:
+
+```
+http://<your-unraid-ip>:8043/api/v1/health
+```
+
+You should see a JSON response indicating the service is healthy.
+
+### 2. System Requirements
+
+- **Unraid Server**: Unraid 6.9.0 or newer
+- **Home Assistant**: 2025.1 or newer
+- **Network**: Home Assistant must be able to reach your Unraid server on port 8043 (or your configured port)
+
+### 3. Network Configuration
+
+Ensure your firewall allows:
+
+- **Port 8043** (or your configured port) for REST API communication
+- **WebSocket connections** on the same port for real-time updates
+
+---
+
+## Installation
+
+### Via HACS (Recommended)
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=ruaan-deysel&repository=ha-unraid-management-agent&category=integration)
+
+**Manual HACS Installation:**
+
+1. Open HACS in Home Assistant
+2. Go to **Integrations**
+3. Click the **⋮** menu → **Custom repositories**
+4. Add this repository: `https://github.com/ruaan-deysel/ha-unraid-management-agent`
+5. Category: **Integration**
+6. Click **Add**
+7. Search for **Unraid Management Agent**
+8. Click **Download**
+9. Restart Home Assistant
+
+### Manual Installation
+
+1. Download the latest release from the [Releases](https://github.com/ruaan-deysel/ha-unraid-management-agent/releases) page
+2. Extract the `unraid_management_agent` folder to your Home Assistant `config/custom_components/` directory
 3. Restart Home Assistant
-4. Add integration via UI
 
 ### Configuration
 

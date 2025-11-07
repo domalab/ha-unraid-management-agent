@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Enhanced README.md with comprehensive Prerequisites section
+- Added HACS installation badge for one-click installation
+- Improved documentation with detailed Unraid Management Agent plugin installation instructions
+
 ## [2025.11.1] - 2025-11-07
 
 ### Fixed
