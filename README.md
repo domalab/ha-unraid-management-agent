@@ -283,6 +283,35 @@ ha-unraid-management-agent/
 5. Test control operations
 6. Test WebSocket reconnection
 
+## Releases
+
+This integration follows semantic versioning with the format `vYYYY.MM.x` (e.g., `v2025.11.1`).
+
+### Latest Release
+
+Check the [Releases](https://github.com/ruaan-deysel/ha-unraid-management-agent/releases) page for the latest version and changelog.
+
+### Release Process
+
+Releases are automated via GitHub Actions:
+
+1. Update `manifest.json` version
+2. Update `CHANGELOG.md` with release notes
+3. Create and push a version tag (e.g., `v2025.11.1`)
+4. GitHub Actions automatically builds and publishes the release
+
+For detailed release process documentation, see [docs/RELEASE_PROCESS.md](docs/RELEASE_PROCESS.md).
+
+## Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.

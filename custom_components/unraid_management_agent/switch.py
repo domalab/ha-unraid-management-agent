@@ -107,6 +107,9 @@ class UnraidContainerSwitch(UnraidSwitchBase):
         self._container_name = container_name
         self._attr_name = f"Container {container_name}"
         self._attr_icon = ICON_CONTAINER
+        # Enable optimistic mode to prevent UI state jumping
+        self._attr_assumed_state = False
+        self._optimistic_state: bool | None = None
 
     @property
     def unique_id(self) -> str:
@@ -116,6 +119,11 @@ class UnraidContainerSwitch(UnraidSwitchBase):
     @property
     def is_on(self) -> bool:
         """Return true if container is running."""
+        # Use optimistic state if set (during state transitions)
+        if self._optimistic_state is not None:
+            return self._optimistic_state
+
+        # Otherwise use actual state from coordinator
         for container in self.coordinator.data.get(KEY_CONTAINERS, []):
             cid = container.get("id") or container.get("container_id")
             if cid == self._container_id:
@@ -140,11 +148,24 @@ class UnraidContainerSwitch(UnraidSwitchBase):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the container."""
         try:
+            # Set optimistic state immediately to prevent UI jumping
+            self._optimistic_state = True
+            self.async_write_ha_state()
+
             await self.coordinator.client.start_container(self._container_id)
             _LOGGER.info("Started container: %s", self._container_name)
+
             # Request immediate update
             await self.coordinator.async_request_refresh()
+
+            # Clear optimistic state after refresh completes
+            self._optimistic_state = None
+            self.async_write_ha_state()
         except Exception as err:
+            # Clear optimistic state on error
+            self._optimistic_state = None
+            self.async_write_ha_state()
+
             _LOGGER.error("Failed to start container %s: %s", self._container_name, err)
             raise HomeAssistantError(
                 f"{ERROR_CONTROL_FAILED}: Failed to start container {self._container_name}"
@@ -153,11 +174,24 @@ class UnraidContainerSwitch(UnraidSwitchBase):
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the container."""
         try:
+            # Set optimistic state immediately to prevent UI jumping
+            self._optimistic_state = False
+            self.async_write_ha_state()
+
             await self.coordinator.client.stop_container(self._container_id)
             _LOGGER.info("Stopped container: %s", self._container_name)
+
             # Request immediate update
             await self.coordinator.async_request_refresh()
+
+            # Clear optimistic state after refresh completes
+            self._optimistic_state = None
+            self.async_write_ha_state()
         except Exception as err:
+            # Clear optimistic state on error
+            self._optimistic_state = None
+            self.async_write_ha_state()
+
             _LOGGER.error("Failed to stop container %s: %s", self._container_name, err)
             raise HomeAssistantError(
                 f"{ERROR_CONTROL_FAILED}: Failed to stop container {self._container_name}"
@@ -183,6 +217,9 @@ class UnraidVMSwitch(UnraidSwitchBase):
         self._vm_name = vm_name
         self._attr_name = f"VM {vm_name}"
         self._attr_icon = ICON_VM
+        # Enable optimistic mode to prevent UI state jumping
+        self._attr_assumed_state = False
+        self._optimistic_state: bool | None = None
 
     @property
     def unique_id(self) -> str:
@@ -192,6 +229,11 @@ class UnraidVMSwitch(UnraidSwitchBase):
     @property
     def is_on(self) -> bool:
         """Return true if VM is running."""
+        # Use optimistic state if set (during state transitions)
+        if self._optimistic_state is not None:
+            return self._optimistic_state
+
+        # Otherwise use actual state from coordinator
         for vm in self.coordinator.data.get(KEY_VMS, []):
             vid = vm.get("id") or vm.get("name")
             if vid == self._vm_id:
@@ -215,11 +257,24 @@ class UnraidVMSwitch(UnraidSwitchBase):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the VM."""
         try:
+            # Set optimistic state immediately to prevent UI jumping
+            self._optimistic_state = True
+            self.async_write_ha_state()
+
             await self.coordinator.client.start_vm(self._vm_id)
             _LOGGER.info("Started VM: %s", self._vm_name)
+
             # Request immediate update
             await self.coordinator.async_request_refresh()
+
+            # Clear optimistic state after refresh completes
+            self._optimistic_state = None
+            self.async_write_ha_state()
         except Exception as err:
+            # Clear optimistic state on error
+            self._optimistic_state = None
+            self.async_write_ha_state()
+
             _LOGGER.error("Failed to start VM %s: %s", self._vm_name, err)
             raise HomeAssistantError(
                 f"{ERROR_CONTROL_FAILED}: Failed to start VM {self._vm_name}"
@@ -228,11 +283,24 @@ class UnraidVMSwitch(UnraidSwitchBase):
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the VM."""
         try:
+            # Set optimistic state immediately to prevent UI jumping
+            self._optimistic_state = False
+            self.async_write_ha_state()
+
             await self.coordinator.client.stop_vm(self._vm_id)
             _LOGGER.info("Stopped VM: %s", self._vm_name)
+
             # Request immediate update
             await self.coordinator.async_request_refresh()
+
+            # Clear optimistic state after refresh completes
+            self._optimistic_state = None
+            self.async_write_ha_state()
         except Exception as err:
+            # Clear optimistic state on error
+            self._optimistic_state = None
+            self.async_write_ha_state()
+
             _LOGGER.error("Failed to stop VM %s: %s", self._vm_name, err)
             raise HomeAssistantError(
                 f"{ERROR_CONTROL_FAILED}: Failed to stop VM {self._vm_name}"
