@@ -7,8 +7,9 @@ from unittest.mock import AsyncMock, patch
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.core import HomeAssistant
 
-from custom_components.unraid_management_agent.binary_sensor import \
-    _is_physical_network_interface
+from custom_components.unraid_management_agent.binary_sensor import (
+    _is_physical_network_interface,
+)
 
 
 async def test_binary_sensor_setup(
@@ -49,9 +50,9 @@ async def test_binary_sensor_setup(
     ]
 
     for sensor_id in expected_sensors:
-        assert (
-            sensor_id in binary_sensor_entities
-        ), f"Expected sensor {sensor_id} not found"
+        assert sensor_id in binary_sensor_entities, (
+            f"Expected sensor {sensor_id} not found"
+        )
 
 
 async def test_array_started_sensor(

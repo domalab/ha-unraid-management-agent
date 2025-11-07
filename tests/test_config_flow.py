@@ -11,9 +11,16 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 
 from custom_components.unraid_management_agent.const import (
-    CONF_ENABLE_WEBSOCKET, CONF_UPDATE_INTERVAL, DEFAULT_ENABLE_WEBSOCKET,
-    DEFAULT_PORT, DEFAULT_UPDATE_INTERVAL, DOMAIN, ERROR_CANNOT_CONNECT,
-    ERROR_TIMEOUT, ERROR_UNKNOWN)
+    CONF_ENABLE_WEBSOCKET,
+    CONF_UPDATE_INTERVAL,
+    DEFAULT_ENABLE_WEBSOCKET,
+    DEFAULT_PORT,
+    DEFAULT_UPDATE_INTERVAL,
+    DOMAIN,
+    ERROR_CANNOT_CONNECT,
+    ERROR_TIMEOUT,
+    ERROR_UNKNOWN,
+)
 
 from .const import MOCK_CONFIG
 
@@ -218,8 +225,7 @@ async def test_form_user_default_port(hass: HomeAssistant, mock_api_client) -> N
 
 async def test_validate_input_success(hass: HomeAssistant, mock_api_client) -> None:
     """Test validate_input function with successful connection."""
-    from custom_components.unraid_management_agent.config_flow import \
-        validate_input
+    from custom_components.unraid_management_agent.config_flow import validate_input
 
     with (
         patch(
@@ -241,8 +247,7 @@ async def test_validate_input_connection_error(
     hass: HomeAssistant, mock_api_client
 ) -> None:
     """Test validate_input function with connection error."""
-    from custom_components.unraid_management_agent.config_flow import \
-        validate_input
+    from custom_components.unraid_management_agent.config_flow import validate_input
 
     mock_api_client.get_system_info.side_effect = ConnectionError("Connection failed")
 
@@ -262,8 +267,7 @@ async def test_validate_input_connection_error(
 
 async def test_validate_input_timeout(hass: HomeAssistant, mock_api_client) -> None:
     """Test validate_input function with timeout."""
-    from custom_components.unraid_management_agent.config_flow import \
-        validate_input
+    from custom_components.unraid_management_agent.config_flow import validate_input
 
     mock_api_client.get_system_info.side_effect = TimeoutError("Timeout")
 

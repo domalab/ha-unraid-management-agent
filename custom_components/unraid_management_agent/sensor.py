@@ -17,7 +17,6 @@ from homeassistant.const import (
     UnitOfDataRate,
     UnitOfPower,
     UnitOfTemperature,
-    UnitOfTime,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
@@ -31,6 +30,7 @@ from .const import (
     ATTR_CPU_MODEL,
     ATTR_CPU_THREADS,
     ATTR_GPU_DRIVER_VERSION,
+    ATTR_GPU_NAME,
     ATTR_HOSTNAME,
     ATTR_NETWORK_IP,
     ATTR_NETWORK_MAC,
@@ -44,6 +44,7 @@ from .const import (
     ATTR_UPS_STATUS,
     DOMAIN,
     ICON_ARRAY,
+    ICON_CONTAINER,
     ICON_CPU,
     ICON_GPU,
     ICON_MEMORY,
@@ -98,6 +99,10 @@ async def async_setup_entry(
     """Set up Unraid sensor entities."""
     coordinator: UnraidDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
 
+    _LOGGER.debug(
+        "Setting up Unraid sensors, coordinator data keys: %s", coordinator.data.keys()
+    )
+
     entities: list[SensorEntity] = []
 
     # System sensors
@@ -134,14 +139,41 @@ async def async_setup_entry(
     for disk in disks:
         disk_id = disk.get("id", disk.get("name", "unknown"))
         disk_name = disk.get("name", disk_id)
-        # Create usage sensor for each disk (temperature is now an attribute)
-        entities.append(UnraidDiskUsageSensor(coordinator, entry, disk_id, disk_name))
+        disk_role = disk.get("role", "")
+
+        # Create health sensor for physical disks only (skip virtual filesystems)
+        # Virtual filesystems like docker_vdisk and log don't have SMART data
+        if disk_role not in ("docker_vdisk", "log"):
+            entities.append(
+                UnraidDiskHealthSensor(coordinator, entry, disk_id, disk_name)
+            )
+
+        # Skip parity disks for usage sensors - they don't have usage data
+        # Check the disk name, not the ID (ID is the device ID, name is "parity", "disk1", etc.)
+        if disk_name not in ("parity", "parity2"):
+            # Create usage sensor for each non-parity disk
+            entities.append(
+                UnraidDiskUsageSensor(coordinator, entry, disk_id, disk_name)
+            )
+
+    # Docker vDisk usage sensor (if available)
+    docker_vdisk = next((d for d in disks if d.get("role") == "docker_vdisk"), None)
+    _LOGGER.debug("Docker vDisk found: %s", docker_vdisk is not None)
+    if docker_vdisk:
+        _LOGGER.debug("Creating Docker vDisk usage sensor")
+        entities.append(UnraidDockerVDiskUsageSensor(coordinator, entry))
+
+    # Log filesystem usage sensor (if available)
+    log_filesystem = next((d for d in disks if d.get("role") == "log"), None)
+    _LOGGER.debug("Log filesystem found: %s", log_filesystem is not None)
+    if log_filesystem:
+        _LOGGER.debug("Creating Log filesystem usage sensor")
+        entities.append(UnraidLogFilesystemUsageSensor(coordinator, entry))
 
     # GPU sensors (if GPU available)
     if coordinator.data.get(KEY_GPU):
         entities.extend(
             [
-                UnraidGPUNameSensor(coordinator, entry),
                 UnraidGPUUtilizationSensor(coordinator, entry),
                 UnraidGPUCPUTemperatureSensor(coordinator, entry),
                 UnraidGPUPowerSensor(coordinator, entry),
@@ -159,11 +191,12 @@ async def async_setup_entry(
             ]
         )
 
-    # Network sensors (only physical interfaces)
+    # Network sensors (only physical interfaces that are connected)
     for interface in coordinator.data.get(KEY_NETWORK, []):
         interface_name = interface.get("name", "unknown")
-        # Only create sensors for physical network interfaces
-        if _is_physical_network_interface(interface_name):
+        interface_state = interface.get("state", "down")
+        # Only create sensors for physical network interfaces that are up/connected
+        if _is_physical_network_interface(interface_name) and interface_state == "up":
             entities.extend(
                 [
                     UnraidNetworkRXSensor(coordinator, entry, interface_name),
@@ -171,6 +204,7 @@ async def async_setup_entry(
                 ]
             )
 
+    _LOGGER.debug("Adding %d Unraid sensor entities", len(entities))
     async_add_entities(entities)
 
 
@@ -232,11 +266,29 @@ class UnraidCPUUsageSensor(UnraidSensorBase):
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return extra attributes."""
         system_data = self.coordinator.data.get(KEY_SYSTEM, {})
-        return {
+
+        # Note: cpu_cores from API is incorrect (shows 1 instead of actual core count)
+        # cpu_threads is correct, so we can infer cores if needed
+        cpu_cores = system_data.get("cpu_cores", 0)
+        cpu_threads = system_data.get("cpu_threads", 0)
+
+        # If cores seems wrong (1 core with 12 threads is impossible),
+        # assume hyperthreading and divide threads by 2
+        if cpu_cores == 1 and cpu_threads > 2:
+            cpu_cores = cpu_threads // 2
+
+        attrs = {
             ATTR_CPU_MODEL: system_data.get("cpu_model"),
-            ATTR_CPU_CORES: system_data.get("cpu_cores"),
-            ATTR_CPU_THREADS: system_data.get("cpu_threads"),
+            ATTR_CPU_CORES: cpu_cores,
+            ATTR_CPU_THREADS: cpu_threads,
         }
+
+        # Add CPU frequency if available
+        cpu_mhz = system_data.get("cpu_mhz")
+        if cpu_mhz:
+            attrs["cpu_frequency"] = f"{cpu_mhz:.0f} MHz"
+
+        return attrs
 
 
 class UnraidRAMUsageSensor(UnraidSensorBase):
@@ -267,12 +319,34 @@ class UnraidRAMUsageSensor(UnraidSensorBase):
         """Return extra attributes."""
         system_data = self.coordinator.data.get(KEY_SYSTEM, {})
         ram_total = system_data.get("ram_total_bytes", 0)
-        return {
+        ram_used = system_data.get("ram_used_bytes", 0)
+        ram_free = system_data.get("ram_free_bytes", 0)
+        ram_cached = system_data.get("ram_cached_bytes", 0)
+        ram_buffers = system_data.get("ram_buffers_bytes", 0)
+
+        attrs = {
             ATTR_RAM_TOTAL: (
                 f"{ram_total / (1024**3):.2f} GB" if ram_total else "Unknown"
             ),
             ATTR_SERVER_MODEL: system_data.get("server_model"),
         }
+
+        # Add detailed memory breakdown if available
+        if ram_used:
+            attrs["ram_used"] = f"{ram_used / (1024**3):.2f} GB"
+        if ram_free:
+            attrs["ram_free"] = f"{ram_free / (1024**3):.2f} GB"
+        if ram_cached:
+            attrs["ram_cached"] = f"{ram_cached / (1024**3):.2f} GB"
+        if ram_buffers:
+            attrs["ram_buffers"] = f"{ram_buffers / (1024**3):.2f} GB"
+
+        # Calculate available memory (free + cached + buffers)
+        if ram_free and ram_cached and ram_buffers:
+            ram_available = ram_free + ram_cached + ram_buffers
+            attrs["ram_available"] = f"{ram_available / (1024**3):.2f} GB"
+
+        return attrs
 
 
 class UnraidCPUTemperatureSensor(UnraidSensorBase):
@@ -334,7 +408,22 @@ class UnraidFanSensor(UnraidSensorBase):
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._fan_name = fan_name
-        self._attr_name = f"Fan {fan_name}"
+        # Clean up fan name: remove hwmon prefixes and make user-friendly
+        friendly_name = self._clean_fan_name(fan_name)
+        self._attr_name = f"Fan {friendly_name}"
+
+    @staticmethod
+    def _clean_fan_name(fan_name: str) -> str:
+        """Clean up fan name to be user-friendly."""
+        import re
+
+        # Remove hwmon prefixes (e.g., "hwmon4_fan1" -> "1")
+        cleaned = re.sub(r"^hwmon\d+_fan", "", fan_name)
+        # If we got a number, return it as is
+        if cleaned.isdigit():
+            return cleaned
+        # Otherwise return the original name
+        return fan_name
 
     @property
     def unique_id(self) -> str:
@@ -437,7 +526,7 @@ class UnraidArrayUsageSensor(UnraidSensorBase):
     _attr_device_class = SensorDeviceClass.POWER_FACTOR
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_icon = ICON_ARRAY
-    _attr_suggested_display_precision = 1
+    _attr_suggested_display_precision = 1  # Already set - Fix #2 complete
 
     @property
     def unique_id(self) -> str:
@@ -486,36 +575,6 @@ class UnraidParityProgressSensor(UnraidSensorBase):
 # GPU Sensors
 
 
-class UnraidGPUNameSensor(UnraidSensorBase):
-    """GPU name sensor."""
-
-    _attr_name = "GPU Name"
-    _attr_icon = ICON_GPU
-
-    @property
-    def unique_id(self) -> str:
-        """Return unique ID."""
-        return f"{self._entry.entry_id}_gpu_name"
-
-    @property
-    def native_value(self) -> str | None:
-        """Return the state."""
-        gpu_list = self.coordinator.data.get(KEY_GPU, [])
-        if gpu_list and len(gpu_list) > 0:
-            return gpu_list[0].get("name")
-        return None
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return extra attributes."""
-        gpu_list = self.coordinator.data.get(KEY_GPU, [])
-        if gpu_list and len(gpu_list) > 0:
-            return {
-                ATTR_GPU_DRIVER_VERSION: gpu_list[0].get("driver_version"),
-            }
-        return {}
-
-
 class UnraidGPUUtilizationSensor(UnraidSensorBase):
     """GPU utilization sensor."""
 
@@ -538,6 +597,17 @@ class UnraidGPUUtilizationSensor(UnraidSensorBase):
         if gpu_list and len(gpu_list) > 0:
             return gpu_list[0].get("utilization_gpu_percent")
         return None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return extra attributes."""
+        gpu_list = self.coordinator.data.get(KEY_GPU, [])
+        if gpu_list and len(gpu_list) > 0:
+            return {
+                ATTR_GPU_NAME: gpu_list[0].get("name"),
+                ATTR_GPU_DRIVER_VERSION: gpu_list[0].get("driver_version"),
+            }
+        return {}
 
 
 class UnraidGPUCPUTemperatureSensor(UnraidSensorBase):
@@ -563,6 +633,17 @@ class UnraidGPUCPUTemperatureSensor(UnraidSensorBase):
             return gpu_list[0].get("cpu_temperature_celsius")
         return None
 
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return extra attributes."""
+        gpu_list = self.coordinator.data.get(KEY_GPU, [])
+        if gpu_list and len(gpu_list) > 0:
+            return {
+                ATTR_GPU_NAME: gpu_list[0].get("name"),
+                ATTR_GPU_DRIVER_VERSION: gpu_list[0].get("driver_version"),
+            }
+        return {}
+
 
 class UnraidGPUPowerSensor(UnraidSensorBase):
     """GPU power consumption sensor."""
@@ -586,6 +667,17 @@ class UnraidGPUPowerSensor(UnraidSensorBase):
         if gpu_list and len(gpu_list) > 0:
             return gpu_list[0].get("power_draw_watts")
         return None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return extra attributes."""
+        gpu_list = self.coordinator.data.get(KEY_GPU, [])
+        if gpu_list and len(gpu_list) > 0:
+            return {
+                ATTR_GPU_NAME: gpu_list[0].get("name"),
+                ATTR_GPU_DRIVER_VERSION: gpu_list[0].get("driver_version"),
+            }
+        return {}
 
 
 # UPS Sensors
@@ -637,9 +729,9 @@ class UnraidUPSRuntimeSensor(UnraidSensorBase):
     """UPS runtime sensor."""
 
     _attr_name = "UPS Runtime"
-    _attr_native_unit_of_measurement = UnitOfTime.SECONDS
-    _attr_device_class = SensorDeviceClass.DURATION
-    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = None
+    _attr_device_class = None
+    _attr_state_class = None
     _attr_icon = ICON_UPS
 
     @property
@@ -648,9 +740,30 @@ class UnraidUPSRuntimeSensor(UnraidSensorBase):
         return f"{self._entry.entry_id}_ups_runtime"
 
     @property
-    def native_value(self) -> int | None:
-        """Return the state."""
-        return self.coordinator.data.get(KEY_UPS, {}).get("runtime_left_seconds")
+    def native_value(self) -> str | None:
+        """Return the state in human-readable format."""
+        runtime_seconds = self.coordinator.data.get(KEY_UPS, {}).get(
+            "runtime_left_seconds"
+        )
+        if runtime_seconds is None:
+            return None
+
+        # Convert to hours and minutes for better readability
+        if runtime_seconds >= 3600:
+            hours = runtime_seconds / 3600
+            return f"{hours:.1f} hours"
+        minutes = runtime_seconds / 60
+        return f"{minutes:.0f} minutes"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return extra attributes."""
+        runtime_seconds = self.coordinator.data.get(KEY_UPS, {}).get(
+            "runtime_left_seconds"
+        )
+        if runtime_seconds is not None:
+            return {"runtime_seconds": runtime_seconds}
+        return {}
 
 
 class UnraidUPSPowerSensor(UnraidSensorBase):
@@ -716,7 +829,7 @@ class UnraidNetworkRXSensor(UnraidSensorBase):
     _attr_native_unit_of_measurement = UnitOfDataRate.BITS_PER_SECOND
     _attr_device_class = SensorDeviceClass.DATA_RATE
     _attr_state_class = SensorStateClass.MEASUREMENT
-    _attr_suggested_display_precision = 1
+    _attr_suggested_display_precision = 2
 
     def __init__(
         self,
@@ -729,6 +842,8 @@ class UnraidNetworkRXSensor(UnraidSensorBase):
         self._interface_name = interface_name
         self._attr_name = f"Network {interface_name} Inbound"
         self._attr_icon = ICON_NETWORK
+        self._last_bytes = None
+        self._last_update = None
 
     @property
     def unique_id(self) -> str:
@@ -738,12 +853,38 @@ class UnraidNetworkRXSensor(UnraidSensorBase):
     @property
     def native_value(self) -> float | None:
         """Return the state in bits per second."""
+        from datetime import datetime
+
         for interface in self.coordinator.data.get(KEY_NETWORK, []):
             if interface.get("name") == self._interface_name:
                 bytes_received = interface.get("bytes_received")
-                if bytes_received is not None:
-                    # Convert bytes to bits per second (multiply by 8)
-                    return float(bytes_received * 8)
+                if bytes_received is None:
+                    return None
+
+                # Get current time
+                now = datetime.now()
+
+                # If we have previous data, calculate rate
+                if self._last_bytes is not None and self._last_update is not None:
+                    time_diff = (now - self._last_update).total_seconds()
+                    if time_diff > 0:
+                        bytes_diff = bytes_received - self._last_bytes
+                        # Calculate bytes per second, then convert to bits per second
+                        bytes_per_second = bytes_diff / time_diff
+                        bits_per_second = bytes_per_second * 8
+
+                        # Update tracking variables
+                        self._last_bytes = bytes_received
+                        self._last_update = now
+
+                        # Return rate (can be negative if counter reset, return 0 in that case)
+                        return max(0.0, bits_per_second)
+
+                # First run or after reset - store values and return 0
+                self._last_bytes = bytes_received
+                self._last_update = now
+                return 0.0
+
         return None
 
     @property
@@ -751,11 +892,27 @@ class UnraidNetworkRXSensor(UnraidSensorBase):
         """Return extra attributes."""
         for interface in self.coordinator.data.get(KEY_NETWORK, []):
             if interface.get("name") == self._interface_name:
+                # Format network speed
+                speed_mbps = interface.get("speed_mbps")
+                if speed_mbps is not None and speed_mbps > 0:
+                    if speed_mbps >= 1000:
+                        network_speed = f"{speed_mbps / 1000:.0f} Gbps"
+                    else:
+                        network_speed = f"{speed_mbps} Mbps"
+                else:
+                    network_speed = "Unknown"
+
+                # Get IP address or show "N/A" if empty
+                ip_address = interface.get("ip_address") or "N/A"
+
+                # Get status (API uses "state" field)
+                status = interface.get("state", "unknown")
+
                 return {
                     ATTR_NETWORK_MAC: interface.get("mac_address"),
-                    ATTR_NETWORK_IP: interface.get("ip_address"),
-                    ATTR_NETWORK_SPEED: interface.get("speed"),
-                    "status": interface.get("status"),
+                    ATTR_NETWORK_IP: ip_address,
+                    ATTR_NETWORK_SPEED: network_speed,
+                    "status": status,
                     "interface": self._interface_name,
                 }
         return {}
@@ -767,7 +924,7 @@ class UnraidNetworkTXSensor(UnraidSensorBase):
     _attr_native_unit_of_measurement = UnitOfDataRate.BITS_PER_SECOND
     _attr_device_class = SensorDeviceClass.DATA_RATE
     _attr_state_class = SensorStateClass.MEASUREMENT
-    _attr_suggested_display_precision = 1
+    _attr_suggested_display_precision = 2
 
     def __init__(
         self,
@@ -780,6 +937,8 @@ class UnraidNetworkTXSensor(UnraidSensorBase):
         self._interface_name = interface_name
         self._attr_name = f"Network {interface_name} Outbound"
         self._attr_icon = ICON_NETWORK
+        self._last_bytes = None
+        self._last_update = None
 
     @property
     def unique_id(self) -> str:
@@ -789,12 +948,38 @@ class UnraidNetworkTXSensor(UnraidSensorBase):
     @property
     def native_value(self) -> float | None:
         """Return the state in bits per second."""
+        from datetime import datetime
+
         for interface in self.coordinator.data.get(KEY_NETWORK, []):
             if interface.get("name") == self._interface_name:
                 bytes_sent = interface.get("bytes_sent")
-                if bytes_sent is not None:
-                    # Convert bytes to bits per second (multiply by 8)
-                    return float(bytes_sent * 8)
+                if bytes_sent is None:
+                    return None
+
+                # Get current time
+                now = datetime.now()
+
+                # If we have previous data, calculate rate
+                if self._last_bytes is not None and self._last_update is not None:
+                    time_diff = (now - self._last_update).total_seconds()
+                    if time_diff > 0:
+                        bytes_diff = bytes_sent - self._last_bytes
+                        # Calculate bytes per second, then convert to bits per second
+                        bytes_per_second = bytes_diff / time_diff
+                        bits_per_second = bytes_per_second * 8
+
+                        # Update tracking variables
+                        self._last_bytes = bytes_sent
+                        self._last_update = now
+
+                        # Return rate (can be negative if counter reset, return 0 in that case)
+                        return max(0.0, bits_per_second)
+
+                # First run or after reset - store values and return 0
+                self._last_bytes = bytes_sent
+                self._last_update = now
+                return 0.0
+
         return None
 
     @property
@@ -802,11 +987,27 @@ class UnraidNetworkTXSensor(UnraidSensorBase):
         """Return extra attributes."""
         for interface in self.coordinator.data.get(KEY_NETWORK, []):
             if interface.get("name") == self._interface_name:
+                # Format network speed
+                speed_mbps = interface.get("speed_mbps")
+                if speed_mbps is not None and speed_mbps > 0:
+                    if speed_mbps >= 1000:
+                        network_speed = f"{speed_mbps / 1000:.0f} Gbps"
+                    else:
+                        network_speed = f"{speed_mbps} Mbps"
+                else:
+                    network_speed = "Unknown"
+
+                # Get IP address or show "N/A" if empty
+                ip_address = interface.get("ip_address") or "N/A"
+
+                # Get status (API uses "state" field)
+                status = interface.get("state", "unknown")
+
                 return {
                     ATTR_NETWORK_MAC: interface.get("mac_address"),
-                    ATTR_NETWORK_IP: interface.get("ip_address"),
-                    ATTR_NETWORK_SPEED: interface.get("speed"),
-                    "status": interface.get("status"),
+                    ATTR_NETWORK_IP: ip_address,
+                    ATTR_NETWORK_SPEED: network_speed,
+                    "status": status,
                     "interface": self._interface_name,
                 }
         return {}
@@ -857,14 +1058,13 @@ class UnraidDiskUsageSensor(UnraidSensorBase):
                     if size_bytes > 0 and used_bytes > 0:
                         usage_percent = (used_bytes / size_bytes) * 100
 
-                # If disk is in standby/idle, return last known value
-                if spin_state in ("standby", "idle"):
-                    return self._last_known_value
-
-                # Disk is active, update and return current value
+                # Update last known value if we have a valid percentage
+                # (API provides usage_percent even for standby disks)
                 if usage_percent is not None:
                     self._last_known_value = round(usage_percent, 1)
-                    return self._last_known_value
+
+                # Return the last known value (works for both active and standby)
+                return self._last_known_value
 
         return self._last_known_value
 
@@ -880,6 +1080,15 @@ class UnraidDiskUsageSensor(UnraidSensorBase):
                 spin_state = disk.get("spin_state", "active")
                 temperature = disk.get("temperature_celsius")
 
+                # Validate disk size calculation (Fix #5)
+                # Note: Some API data may have inconsistent size/used/free values
+                # This is an API issue, not a sensor issue
+                if size_bytes and free_bytes and size_bytes < free_bytes:
+                    # If size < free, use free as the actual size (API data issue)
+                    actual_size = free_bytes
+                else:
+                    actual_size = size_bytes
+
                 attrs = {
                     "device": disk.get("device"),
                     "status": disk.get("status"),
@@ -887,18 +1096,18 @@ class UnraidDiskUsageSensor(UnraidSensorBase):
                     "mount_point": disk.get("mount_point"),
                     "spin_state": spin_state,
                     "size": (
-                        f"{size_bytes / (1024**3):.2f} GB"
-                        if size_bytes is not None
+                        f"{actual_size / (1024**3):.2f} GB"
+                        if actual_size is not None and actual_size > 0
                         else "Unknown"
                     ),
                     "used": (
                         f"{used_bytes / (1024**3):.2f} GB"
-                        if used_bytes is not None
+                        if used_bytes is not None and used_bytes > 0
                         else "Unknown"
                     ),
                     "free": (
                         f"{free_bytes / (1024**3):.2f} GB"
-                        if free_bytes is not None
+                        if free_bytes is not None and free_bytes > 0
                         else "Unknown"
                     ),
                     "smart_status": disk.get("smart_status"),
@@ -912,4 +1121,203 @@ class UnraidDiskUsageSensor(UnraidSensorBase):
                     attrs["temperature_celsius"] = "Disk in standby"
 
                 return attrs
+        return {}
+
+
+class UnraidDiskHealthSensor(UnraidSensorBase):
+    """Disk health diagnostic sensor."""
+
+    _attr_native_unit_of_measurement = None
+    _attr_state_class = None
+    _attr_icon = "mdi:heart-pulse"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(
+        self,
+        coordinator: UnraidDataUpdateCoordinator,
+        entry: ConfigEntry,
+        disk_id: str,
+        disk_name: str,
+    ) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator, entry)
+        self._disk_id = disk_id
+        self._disk_name = disk_name
+        self._attr_name = f"Disk {disk_name} Health"
+
+    @property
+    def unique_id(self) -> str:
+        """Return unique ID."""
+        # Sanitize disk ID for unique ID
+        safe_id = self._disk_id.replace(" ", "_").replace("/", "_").lower()
+        return f"{self._entry.entry_id}_disk_{safe_id}_health"
+
+    @property
+    def native_value(self) -> str | None:
+        """Return the state."""
+        for disk in self.coordinator.data.get(KEY_DISKS, []):
+            disk_id = disk.get("id", disk.get("name"))
+            if disk_id == self._disk_id:
+                smart_status = disk.get("smart_status", "").upper()
+                # Map API values to user-friendly display
+                if smart_status == "PASSED":
+                    return "Healthy"
+                if smart_status == "FAILED":
+                    return "Failed"
+                if smart_status == "UNKNOWN":
+                    # For NVMe drives, UNKNOWN status with no errors means healthy
+                    # Check if disk is active and has no SMART errors
+                    disk_status = disk.get("status", "")
+                    smart_errors = disk.get("smart_errors", 0)
+                    if disk_status == "DISK_OK" and smart_errors == 0:
+                        return "Healthy"
+                    return "Unknown"
+                if smart_status:
+                    return smart_status.capitalize()
+                return "Unknown"
+        return "Unknown"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return extra attributes."""
+        for disk in self.coordinator.data.get(KEY_DISKS, []):
+            disk_id = disk.get("id", disk.get("name"))
+            if disk_id == self._disk_id:
+                smart_status = disk.get("smart_status", "").upper()
+                smart_errors = disk.get("smart_errors", 0)
+                disk_status = disk.get("status", "")
+
+                # Provide user-friendly SMART status in attributes
+                # Match the logic used in native_value for consistency
+                if smart_status == "PASSED":
+                    friendly_status = "PASSED"
+                elif smart_status == "FAILED":
+                    friendly_status = "FAILED"
+                elif smart_status == "UNKNOWN":
+                    # For disks with UNKNOWN status, check if they're healthy
+                    if disk_status == "DISK_OK" and smart_errors == 0:
+                        friendly_status = "PASSED (inferred)"
+                    else:
+                        friendly_status = "UNKNOWN"
+                elif smart_status:
+                    friendly_status = smart_status
+                else:
+                    friendly_status = "UNKNOWN"
+
+                return {
+                    "smart_status": friendly_status,
+                    "smart_errors": smart_errors,
+                    "device": disk.get("device"),
+                }
+        return {}
+
+
+class UnraidDockerVDiskUsageSensor(UnraidSensorBase):
+    """Docker vDisk usage sensor."""
+
+    _attr_name = "Docker vDisk Usage"
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_device_class = SensorDeviceClass.POWER_FACTOR
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_icon = ICON_CONTAINER
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_suggested_display_precision = 1
+
+    @property
+    def unique_id(self) -> str:
+        """Return unique ID."""
+        return f"{self._entry.entry_id}_docker_vdisk_usage"
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the state."""
+        for disk in self.coordinator.data.get(KEY_DISKS, []):
+            if disk.get("role") == "docker_vdisk":
+                usage_percent = disk.get("usage_percent")
+                if usage_percent is not None:
+                    return round(usage_percent, 1)
+        return None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return extra attributes."""
+        for disk in self.coordinator.data.get(KEY_DISKS, []):
+            if disk.get("role") == "docker_vdisk":
+                size_bytes = disk.get("size_bytes", 0)
+                used_bytes = disk.get("used_bytes", 0)
+                free_bytes = disk.get("free_bytes", 0)
+
+                return {
+                    "mount_point": disk.get("mount_point"),
+                    "size": (
+                        f"{size_bytes / (1024**3):.2f} GB"
+                        if size_bytes is not None and size_bytes > 0
+                        else "Unknown"
+                    ),
+                    "used": (
+                        f"{used_bytes / (1024**3):.2f} GB"
+                        if used_bytes is not None and used_bytes > 0
+                        else "Unknown"
+                    ),
+                    "free": (
+                        f"{free_bytes / (1024**3):.2f} GB"
+                        if free_bytes is not None and free_bytes > 0
+                        else "Unknown"
+                    ),
+                }
+        return {}
+
+
+class UnraidLogFilesystemUsageSensor(UnraidSensorBase):
+    """Log filesystem usage sensor."""
+
+    _attr_name = "Log Filesystem Usage"
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_device_class = SensorDeviceClass.POWER_FACTOR
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_icon = "mdi:file-document-outline"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_suggested_display_precision = 1
+
+    @property
+    def unique_id(self) -> str:
+        """Return unique ID."""
+        return f"{self._entry.entry_id}_log_filesystem_usage"
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the state."""
+        for disk in self.coordinator.data.get(KEY_DISKS, []):
+            if disk.get("role") == "log":
+                usage_percent = disk.get("usage_percent")
+                if usage_percent is not None:
+                    return round(usage_percent, 1)
+        return None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return extra attributes."""
+        for disk in self.coordinator.data.get(KEY_DISKS, []):
+            if disk.get("role") == "log":
+                size_bytes = disk.get("size_bytes", 0)
+                used_bytes = disk.get("used_bytes", 0)
+                free_bytes = disk.get("free_bytes", 0)
+
+                # Log filesystem is typically small (MB range), so format accordingly
+                # If size is less than 1 GB, show in MB
+                if size_bytes and size_bytes < 1024**3:
+                    size_str = f"{size_bytes / (1024**2):.2f} MB"
+                    used_str = f"{used_bytes / (1024**2):.2f} MB"
+                    free_str = f"{free_bytes / (1024**2):.2f} MB"
+                else:
+                    size_str = f"{size_bytes / (1024**3):.2f} GB"
+                    used_str = f"{used_bytes / (1024**3):.2f} GB"
+                    free_str = f"{free_bytes / (1024**3):.2f} GB"
+
+                return {
+                    "mount_point": disk.get("mount_point"),
+                    "size": size_str if size_bytes > 0 else "Unknown",
+                    "used": used_str if used_bytes > 0 else "Unknown",
+                    "free": free_str if free_bytes > 0 else "Unknown",
+                }
         return {}

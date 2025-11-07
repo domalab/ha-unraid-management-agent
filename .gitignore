@@ -91,3 +91,6 @@ coverage.xml
 # Home Assistant configuration
 config/*
 !config/configuration.yaml
+INTEGRATION_VERIFICATION_REPORT.md
+FIXES_IMPLEMENTATION_SUMMARY.md
+SENSOR_AUDIT.md

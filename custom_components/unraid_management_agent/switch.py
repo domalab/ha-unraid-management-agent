@@ -129,7 +129,9 @@ class UnraidContainerSwitch(UnraidSwitchBase):
         for container in self.coordinator.data.get(KEY_CONTAINERS, []):
             cid = container.get("id") or container.get("container_id")
             if cid == self._container_id:
+                state = container.get("state", "").lower()
                 return {
+                    "status": "running" if state == "running" else "stopped",
                     ATTR_CONTAINER_IMAGE: container.get("image"),
                     ATTR_CONTAINER_PORTS: container.get("ports"),
                 }
@@ -203,7 +205,9 @@ class UnraidVMSwitch(UnraidSwitchBase):
         for vm in self.coordinator.data.get(KEY_VMS, []):
             vid = vm.get("id") or vm.get("name")
             if vid == self._vm_id:
+                state = vm.get("state", "").lower()
                 return {
+                    "status": "running" if state == "running" else "stopped",
                     ATTR_VM_VCPUS: vm.get("vcpus"),
                 }
         return {}

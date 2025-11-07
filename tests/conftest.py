@@ -12,10 +12,19 @@ from homeassistant.core import HomeAssistant
 
 from custom_components.unraid_management_agent.const import DOMAIN
 
-from .const import (MOCK_ARRAY_DATA, MOCK_CONFIG, MOCK_CONTAINERS_DATA,
-                    MOCK_DISKS_DATA, MOCK_GPU_DATA, MOCK_HEALTH_CHECK,
-                    MOCK_NETWORK_DATA, MOCK_OPTIONS, MOCK_SYSTEM_DATA,
-                    MOCK_UPS_DATA, MOCK_VMS_DATA)
+from .const import (
+    MOCK_ARRAY_DATA,
+    MOCK_CONFIG,
+    MOCK_CONTAINERS_DATA,
+    MOCK_DISKS_DATA,
+    MOCK_GPU_DATA,
+    MOCK_HEALTH_CHECK,
+    MOCK_NETWORK_DATA,
+    MOCK_OPTIONS,
+    MOCK_SYSTEM_DATA,
+    MOCK_UPS_DATA,
+    MOCK_VMS_DATA,
+)
 
 pytest_plugins = "pytest_homeassistant_custom_component"
 
@@ -95,8 +104,7 @@ async def mock_config_entry(hass: HomeAssistant) -> ConfigEntry:
 
     if not entry:
         # Use MockConfigEntry from pytest-homeassistant-custom-component
-        from pytest_homeassistant_custom_component.common import \
-            MockConfigEntry
+        from pytest_homeassistant_custom_component.common import MockConfigEntry
 
         entry = MockConfigEntry(
             domain=DOMAIN,

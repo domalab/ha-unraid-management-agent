@@ -18,23 +18,16 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import UnraidDataUpdateCoordinator
 from .const import (
-    ATTR_CONTAINER_IMAGE,
-    ATTR_CONTAINER_PORTS,
     ATTR_PARITY_CHECK_STATUS,
-    ATTR_VM_VCPUS,
     DOMAIN,
     ICON_ARRAY,
-    ICON_CONTAINER,
     ICON_NETWORK,
     ICON_PARITY,
     ICON_UPS,
-    ICON_VM,
     KEY_ARRAY,
-    KEY_CONTAINERS,
     KEY_NETWORK,
     KEY_SYSTEM,
     KEY_UPS,
-    KEY_VMS,
     MANUFACTURER,
     MODEL,
 )
@@ -89,24 +82,6 @@ async def async_setup_entry(
     if coordinator.data.get(KEY_UPS):
         entities.append(UnraidUPSConnectedBinarySensor(coordinator, entry))
 
-    # Container binary sensors
-    for container in coordinator.data.get(KEY_CONTAINERS, []):
-        container_id = container.get("id") or container.get("container_id")
-        container_name = container.get("name", "unknown")
-        if container_id:
-            entities.append(
-                UnraidContainerBinarySensor(
-                    coordinator, entry, container_id, container_name
-                )
-            )
-
-    # VM binary sensors
-    for vm in coordinator.data.get(KEY_VMS, []):
-        vm_id = vm.get("id") or vm.get("name")
-        vm_name = vm.get("name", "unknown")
-        if vm_id:
-            entities.append(UnraidVMBinarySensor(coordinator, entry, vm_id, vm_name))
-
     # Network interface binary sensors (only physical interfaces)
     for interface in coordinator.data.get(KEY_NETWORK, []):
         interface_name = interface.get("name", "unknown")
@@ -156,6 +131,7 @@ class UnraidArrayStartedBinarySensor(UnraidBinarySensorBase):
     _attr_name = "Array Started"
     _attr_device_class = BinarySensorDeviceClass.RUNNING
     _attr_icon = ICON_ARRAY
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     @property
     def unique_id(self) -> str:
@@ -247,103 +223,6 @@ class UnraidUPSConnectedBinarySensor(UnraidBinarySensorBase):
         return self.coordinator.data.get(KEY_UPS, {}).get("connected", False)
 
 
-# Container Binary Sensors
-
-
-class UnraidContainerBinarySensor(UnraidBinarySensorBase):
-    """Container running binary sensor."""
-
-    def __init__(
-        self,
-        coordinator: UnraidDataUpdateCoordinator,
-        entry: ConfigEntry,
-        container_id: str,
-        container_name: str,
-    ) -> None:
-        """Initialize the binary sensor."""
-        super().__init__(coordinator, entry)
-        self._container_id = container_id
-        self._container_name = container_name
-        self._attr_name = f"Container {container_name}"
-        self._attr_device_class = BinarySensorDeviceClass.RUNNING
-        self._attr_icon = ICON_CONTAINER
-
-    @property
-    def unique_id(self) -> str:
-        """Return unique ID."""
-        return f"{self._entry.entry_id}_container_{self._container_id}"
-
-    @property
-    def is_on(self) -> bool:
-        """Return true if container is running."""
-        for container in self.coordinator.data.get(KEY_CONTAINERS, []):
-            cid = container.get("id") or container.get("container_id")
-            if cid == self._container_id:
-                state = container.get("state", "").lower()
-                return state == "running"
-        return False
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return extra attributes."""
-        for container in self.coordinator.data.get(KEY_CONTAINERS, []):
-            cid = container.get("id") or container.get("container_id")
-            if cid == self._container_id:
-                return {
-                    ATTR_CONTAINER_IMAGE: container.get("image"),
-                    ATTR_CONTAINER_PORTS: container.get("ports"),
-                }
-        return {}
-
-
-# VM Binary Sensors
-
-
-class UnraidVMBinarySensor(UnraidBinarySensorBase):
-    """VM running binary sensor."""
-
-    def __init__(
-        self,
-        coordinator: UnraidDataUpdateCoordinator,
-        entry: ConfigEntry,
-        vm_id: str,
-        vm_name: str,
-    ) -> None:
-        """Initialize the binary sensor."""
-        super().__init__(coordinator, entry)
-        self._vm_id = vm_id
-        self._vm_name = vm_name
-        self._attr_name = f"VM {vm_name}"
-        self._attr_device_class = BinarySensorDeviceClass.RUNNING
-        self._attr_icon = ICON_VM
-
-    @property
-    def unique_id(self) -> str:
-        """Return unique ID."""
-        return f"{self._entry.entry_id}_vm_{self._vm_id}"
-
-    @property
-    def is_on(self) -> bool:
-        """Return true if VM is running."""
-        for vm in self.coordinator.data.get(KEY_VMS, []):
-            vid = vm.get("id") or vm.get("name")
-            if vid == self._vm_id:
-                state = vm.get("state", "").lower()
-                return state == "running"
-        return False
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return extra attributes."""
-        for vm in self.coordinator.data.get(KEY_VMS, []):
-            vid = vm.get("id") or vm.get("name")
-            if vid == self._vm_id:
-                return {
-                    ATTR_VM_VCPUS: vm.get("vcpus"),
-                }
-        return {}
-
-
 # Network Interface Binary Sensors
 
 
@@ -362,6 +241,7 @@ class UnraidNetworkInterfaceBinarySensor(UnraidBinarySensorBase):
         self._attr_name = f"Network {interface_name}"
         self._attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
         self._attr_icon = ICON_NETWORK
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
     @property
     def unique_id(self) -> str:
@@ -373,5 +253,7 @@ class UnraidNetworkInterfaceBinarySensor(UnraidBinarySensorBase):
         """Return true if interface is up."""
         for interface in self.coordinator.data.get(KEY_NETWORK, []):
             if interface.get("name") == self._interface_name:
-                return interface.get("up", False)
+                # API returns "state" field with values like "up", "down", "lowerlayerdown"
+                state = interface.get("state", "down")
+                return state == "up"
         return False

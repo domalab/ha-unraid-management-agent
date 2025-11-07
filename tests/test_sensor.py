@@ -8,8 +8,9 @@ from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.const import PERCENTAGE
 from homeassistant.core import HomeAssistant
 
-from custom_components.unraid_management_agent.sensor import \
-    _is_physical_network_interface
+from custom_components.unraid_management_agent.sensor import (
+    _is_physical_network_interface,
+)
 
 
 async def test_sensor_setup(

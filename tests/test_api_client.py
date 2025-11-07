@@ -7,12 +7,19 @@ import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from custom_components.unraid_management_agent.api_client import \
-    UnraidAPIClient
+from custom_components.unraid_management_agent.api_client import UnraidAPIClient
 
-from .const import (MOCK_ARRAY_DATA, MOCK_CONTAINERS_DATA, MOCK_DISKS_DATA,
-                    MOCK_GPU_DATA, MOCK_HEALTH_CHECK, MOCK_NETWORK_DATA,
-                    MOCK_SYSTEM_DATA, MOCK_UPS_DATA, MOCK_VMS_DATA)
+from .const import (
+    MOCK_ARRAY_DATA,
+    MOCK_CONTAINERS_DATA,
+    MOCK_DISKS_DATA,
+    MOCK_GPU_DATA,
+    MOCK_HEALTH_CHECK,
+    MOCK_NETWORK_DATA,
+    MOCK_SYSTEM_DATA,
+    MOCK_UPS_DATA,
+    MOCK_VMS_DATA,
+)
 
 
 @pytest.fixture
